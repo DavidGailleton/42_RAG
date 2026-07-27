@@ -6,9 +6,13 @@ import fire
 class RAG(object):
     """Will you answer my questions?"""
 
-    def index(self, max_chunk_size: int) -> None:
+    def index(self, max_chunk_size: int = 2000) -> None:
         """Ingest data/raw/ and build the index under data/processed/"""
-        print(max_chunk_size)
+        from src.indexer import Indexer
+
+        indexer = Indexer(max_chunk_size=max_chunk_size)
+
+        indexer.index()
 
     def search(self, query: str, k: int) -> None:
         """Return the top-k sources for a single query"""
