@@ -1,5 +1,5 @@
 [project]
-name = "RAG against the machine"
+name = "RAG_against_the_machine"
 version = "0.1.0"
 description = "Will you answer my questions?"
 readme = "README.md"
