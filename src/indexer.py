@@ -6,9 +6,10 @@ from langchain_text_splitters import (
     Language,
     RecursiveCharacterTextSplitter,
 )
-from pydantic.types import T
 
 from src.classes.models import MinimalSource
+
+import bm25s
 
 
 class Indexer:
@@ -89,9 +90,7 @@ class Indexer:
 
     def index(self):
         chunks = self.chunking()
-        with open("data/processed/chunks.json", "w", encoding="utf-8") as file:
-            json.dump(
-                [obj.model_dump_json() for obj in chunks],
-                file,
-                ensure_ascii=True,
-            )
+        chunks_lst = [chunk.text for chunk in chunks]
+        retriever = bm25s.BM25(corpus=chunks_lst)
+        retriever.index(bm25s.tokenize(chunks_lst))
+        retriever.save("data/processed")
