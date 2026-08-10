@@ -219,3 +219,5 @@ __marimo__/
 
 data/raw/*
 data/processed/*
+
+datasets_public/

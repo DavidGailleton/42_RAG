@@ -1,47 +1,71 @@
+from re import search
+
 import bm25s
 import json
 from pathlib import Path
+
+from numpy import save
 
 from src.classes.models import (
     MinimalSearchResults,
     MinimalSource,
     StudentSearchResults,
+    RagDataset,
+    AnsweredQuestion,
+    UnansweredQuestion,
 )
 
 from typing import Any
 
 
 class Search:
-    def __init__(self, query: str, k: int) -> None:
-        self.query = query
-        self.k = k
-
-    def search(self) -> None:
+    @staticmethod
+    def search(query: str, k: int) -> list[MinimalSource]:
         retriever = bm25s.BM25().load("data/processed", load_corpus=True)
-        docs, scores = retriever.retrieve(bm25s.tokenize(self.query), k=self.k)
+        docs, _ = retriever.retrieve(bm25s.tokenize(query), k=k)
 
-        self.save_student_search_results(docs, scores)
+        return [MinimalSource(**doc) for doc in docs[0]]
 
-    def save_student_search_results(self, docs: Any, scores: Any) -> None:
-        output_path = Path("data/output/search_results")
 
-        try:
-            with open(
-                output_path.__str__() + f"/{self.k}.json", encoding="utf-8"
-            ) as file:
-                ssr = StudentSearchResults(**json.load(file)[0])
-        except FileNotFoundError:
+class SearchDataset:
+    def __init__(self, dataset_path: str, k: int, save_directory: str) -> None:
+        self.dataset_path = Path(dataset_path)
+        self.k = k
+        self.save_directory = save_directory
+
+    def search_dataset(self) -> None:
+        for file in self.dataset_path.rglob("*.json"):
+            dataset = self.load_dataset(file)
+
             ssr = StudentSearchResults(search_results=[], k=self.k)
 
-        ssr.search_results.append(
-            MinimalSearchResults(
-                question_id=f"q{len(ssr.search_results)}",
-                question=self.query,
-                retrieved_sources=[MinimalSource(**doc) for doc in docs[0]],
-            )
-        )
+            for question in dataset:
+                ssr.search_results.append(
+                    MinimalSearchResults(
+                        question_id=question.question_id,
+                        question=question.question,
+                        retrieved_sources=Search.search(
+                            question.question, self.k
+                        ),
+                    )
+                )
 
-        with open(
-            output_path.__str__() + f"/{self.k}.json", "w", encoding="utf-8"
-        ) as file:
-            json.dump(ssr.dict(), file, indent=4, ensure_ascii=False)
+            with open(
+                f"{self.save_directory}/{file.name}", "w", encoding="utf-8"
+            ) as save_file:
+                json.dump(
+                    json.loads(ssr.model_dump_json()),
+                    save_file,
+                    indent=4,
+                    ensure_ascii=False,
+                )
+
+    def load_dataset(self, path: Path) -> list[UnansweredQuestion]:
+        dataset: list[UnansweredQuestion] = []
+
+        with open(path, "r", encoding="utf-8") as doc:
+            questions = json.load(doc)["rag_questions"]
+        for question in questions:
+            dataset.append(UnansweredQuestion(**question))
+
+        return dataset

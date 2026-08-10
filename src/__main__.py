@@ -18,14 +18,18 @@ class RAG(object):
         """Return the top-k sources for a single query"""
         from src.search import Search
 
-        search = Search(query=query, k=k)
-        search.search()
+        print(Search.search(query, k))
 
     def search_dataset(
         self, dataset_path: str, k: int, save_directory: str
     ) -> None:
         """Run search over a whole dataset and write a StudentSearchResults JSON file"""
-        print("index")
+        from src.search import SearchDataset
+
+        sd = SearchDataset(
+            dataset_path=dataset_path, k=k, save_directory=save_directory
+        )
+        sd.search_dataset()
 
     def answer(self, query: str, k: int) -> None:
         """Answer a single query using the retrieved context"""
