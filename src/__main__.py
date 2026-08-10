@@ -16,7 +16,10 @@ class RAG(object):
 
     def search(self, query: str, k: int) -> None:
         """Return the top-k sources for a single query"""
-        print("index")
+        from src.search import Search
+
+        search = Search(query=query, k=k)
+        search.search()
 
     def search_dataset(
         self, dataset_path: str, k: int, save_directory: str
@@ -50,6 +53,8 @@ def main() -> int:
     try:
         fire.Fire(RAG)
         return 0
+    except KeyboardInterrupt:
+        return 1
     except Exception as error:
         print(f"Error: {error}")
         return 1

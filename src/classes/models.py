@@ -8,6 +8,14 @@ class MinimalSource(BaseModel):
     last_character_index: int
     text: str
 
+    def to_dict(self) -> dict:
+        return {
+            "file_path": self.file_path,
+            "first_character_index": self.first_character_index,
+            "last_character_index": self.last_character_index,
+            "text": self.text,
+        }
+
 
 class UnansweredQuestion(BaseModel):
     question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))

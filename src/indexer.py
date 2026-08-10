@@ -1,7 +1,6 @@
 from pathlib import Path
 
-import json
-
+from bm25s.utils import corpus
 from langchain_text_splitters import (
     Language,
     RecursiveCharacterTextSplitter,
@@ -10,6 +9,7 @@ from langchain_text_splitters import (
 from src.classes.models import MinimalSource
 
 import bm25s
+import Stemmer
 
 
 class Indexer:
@@ -90,7 +90,18 @@ class Indexer:
 
     def index(self):
         chunks = self.chunking()
+
         chunks_lst = [chunk.text for chunk in chunks]
-        retriever = bm25s.BM25(corpus=chunks_lst)
-        retriever.index(bm25s.tokenize(chunks_lst))
-        retriever.save("data/processed")
+        metadata_chunks = [chunk.to_dict() for chunk in chunks]
+
+        stemmer = Stemmer.Stemmer("english")
+        tokenizer = bm25s.tokenization.Tokenizer(stemmer=stemmer)
+
+        corpus_tokens = tokenizer.tokenize(chunks_lst, return_as="tuple")
+
+        retriever = bm25s.BM25(corpus=metadata_chunks)
+        retriever.index(corpus_tokens)
+
+        retriever.save(self.output_path, corpus=metadata_chunks)
+        tokenizer.save_vocab(self.output_path.__str__())
+        tokenizer.save_stopwords(self.output_path.__str__())
