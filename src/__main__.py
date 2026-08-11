@@ -33,7 +33,11 @@ class RAG(object):
 
     def answer(self, query: str, k: int) -> None:
         """Answer a single query using the retrieved context"""
-        print("index")
+        from src.answer import Answer
+
+        answer = Answer()
+
+        print(answer.answer(query=query, k=k))
 
     def answer_dataset(
         self, student_search_results_path: str, save_directory: str
@@ -54,8 +58,8 @@ def main() -> int:
     Returns:
         Exit status code.
     """
+    fire.Fire(RAG)
     try:
-        fire.Fire(RAG)
         return 0
     except KeyboardInterrupt:
         return 1

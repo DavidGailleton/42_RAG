@@ -5,12 +5,16 @@ description = "Will you answer my questions?"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "accelerate>=1.14.0",
     "bm25s>=0.3.10",
     "fire>=0.7.1",
     "langchain-text-splitters>=1.1.2",
     "numpy>=2.2.6",
+    "ollama>=0.6.2",
     "pydantic>=2.13.4",
     "pystemmer>=3.1.0",
+    "torch>=2.13.0",
+    "transformers>=5.15.0",
 ]
 
 [dependency-groups]
