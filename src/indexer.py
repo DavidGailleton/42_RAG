@@ -17,39 +17,56 @@ class Indexer:
         self.input_path = Path("data/raw/")
         self.output_path = Path("data/processed/")
 
-    def split_text(self, file: Path) -> list[str]:
-        with open(file, encoding="utf-8") as content:
-            match file.name.split(".")[-1]:
-                case "py":
-                    text_splitter = (
-                        RecursiveCharacterTextSplitter.from_language(
-                            language=Language.PYTHON,
-                            chunk_size=self.max_chunk_size,
-                            chunk_overlap=10,
-                        )
-                    )
-                case "md":
-                    text_splitter = (
-                        RecursiveCharacterTextSplitter.from_language(
-                            language=Language.MARKDOWN,
-                            chunk_size=self.max_chunk_size,
-                            chunk_overlap=10,
-                        )
-                    )
-                case "rst":
-                    text_splitter = (
-                        RecursiveCharacterTextSplitter.from_language(
-                            language=Language.RST,
-                            chunk_size=self.max_chunk_size,
-                            chunk_overlap=10,
-                        )
-                    )
-                case _:
-                    text_splitter = RecursiveCharacterTextSplitter(
-                        chunk_size=self.max_chunk_size,
-                        chunk_overlap=10,
-                    )
-            return text_splitter.split_text(content.read())
+    def make_splitter(
+        self,
+        suffix: str,
+    ) -> RecursiveCharacterTextSplitter:
+        """Create a splitter appropriate for the file type."""
+        common_options = {
+            "chunk_size": self.max_chunk_size,
+            "chunk_overlap": 200,
+            "add_start_index": True,
+            "strip_whitespace": False,
+        }
+
+        if suffix == ".py":
+            return RecursiveCharacterTextSplitter.from_language(
+                language=Language.PYTHON,
+                **common_options,
+            )
+
+        if suffix == ".md":
+            return RecursiveCharacterTextSplitter.from_language(
+                language=Language.MARKDOWN,
+                **common_options,
+            )
+
+        if suffix == ".rst":
+            return RecursiveCharacterTextSplitter.from_language(
+                language=Language.RST,
+                **common_options,
+            )
+
+        return RecursiveCharacterTextSplitter(**common_options)
+
+    def split_text(
+        self,
+        file: Path,
+    ) -> list[tuple[str, int, int]]:
+        """Split a file while preserving exact character positions."""
+        text = file.read_text(encoding="utf-8", errors="replace")
+        splitter = self.make_splitter(file.suffix.lower())
+        documents = splitter.create_documents([text])
+
+        chunks: list[tuple[str, int, int]] = []
+
+        for document in documents:
+            start = int(document.metadata["start_index"])
+            end = start + len(document.page_content)
+
+            chunks.append((document.page_content, start, end))
+
+        return chunks
 
     def chunking(self) -> list[MinimalSource]:
         res: list[MinimalSource] = []
@@ -63,22 +80,14 @@ class Indexer:
                     ".txt",
                 )
             ):
-                file_chunks: list[str] = self.split_text(file)
-
-                with open(file, encoding="utf-8") as content:
-                    text = content.read()
-
-                    for chunk in file_chunks:
-                        start = text.index(chunk)
-                        end = start + len(chunk)
-
-                        res.append(
-                            MinimalSource(
-                                file_path=file.__str__(),
-                                first_character_index=start,
-                                last_character_index=end,
-                            )
+                for chunk in self.split_text(file):
+                    res.append(
+                        MinimalSource(
+                            file_path=file.__str__(),
+                            first_character_index=chunk[1],
+                            last_character_index=chunk[2],
                         )
+                    )
 
         return res
 

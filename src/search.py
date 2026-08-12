@@ -4,25 +4,26 @@ import bm25s
 import json
 from pathlib import Path
 
-from numpy import save
-
 from src.classes.models import (
     MinimalSearchResults,
     MinimalSource,
     StudentSearchResults,
-    RagDataset,
-    AnsweredQuestion,
     UnansweredQuestion,
 )
 
-from typing import Any
+import Stemmer
 
 
 class Search:
     @staticmethod
     def search(query: str, k: int) -> list[MinimalSource]:
         retriever = bm25s.BM25().load("data/processed", load_corpus=True)
-        docs, _ = retriever.retrieve(bm25s.tokenize(query), k=k)
+        stemmer = Stemmer.Stemmer("english")
+        tokenizer = bm25s.tokenization.Tokenizer(stemmer=stemmer)
+        tokenizer.load_vocab("data/processed")
+        tokenizer.load_stopwords("data/processed")
+
+        docs, _ = retriever.retrieve(tokenizer.tokenize([query]), k=k)
 
         return [MinimalSource(**doc) for doc in docs[0]]
 
