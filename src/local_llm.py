@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Generator
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -86,3 +86,6 @@ class LocalQwen:
             generated_ids,
             skip_special_tokens=True,
         ).strip()
+
+    def chunk(self) -> Generator:
+        pass

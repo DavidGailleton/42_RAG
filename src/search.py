@@ -54,7 +54,7 @@ class SearchDataset:
                 f"{self.save_directory}/{file.name}", "w", encoding="utf-8"
             ) as save_file:
                 json.dump(
-                    json.loads(ssr.model_dump_json()),
+                    ssr.model_dump(),
                     save_file,
                     indent=4,
                     ensure_ascii=False,

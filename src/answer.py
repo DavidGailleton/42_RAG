@@ -1,6 +1,17 @@
-from src.classes.models import MinimalSource
+from tqdm.std import tqdm
+
+from src.classes.models import (
+    ExtendedMinimalSource,
+    MinimalAnswer,
+    MinimalSource,
+    StudentSearchResults,
+    StudentSearchResultsAndAnswer,
+)
 from src.local_llm import LocalQwen
 from src.search import Search
+
+from pathlib import Path
+import json
 
 
 class Answer:
@@ -40,7 +51,7 @@ class Answer:
                 f"Character range: "
                 f"{source.first_character_index}-"
                 f"{source.last_character_index}\n"
-                f"Content:\n{source.text}"
+                f"Content:\n{source.get_text()}"
             )
 
         context = "\n\n".join(context_parts)
@@ -63,7 +74,52 @@ class Answer:
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
             )
+        except ValueError:
+            return "Invalid source found"
         except OSError as error:
             return f"Unable to load the language model: {error}"
         except RuntimeError as error:
             return f"Model generation failed: {error}"
+
+
+class AnswerDataset:
+    def __init__(
+        self, student_search_results_path: str, save_directory: str
+    ) -> None:
+        self.llm = LocalQwen()
+        self.student_search_results_path = student_search_results_path
+        self.save_directory = save_directory
+
+    def answer_dataset(self) -> None:
+        answer_cls = Answer(self.llm)
+
+        for file in Path(self.student_search_results_path).rglob("*.json"):
+            with open(file) as f:
+                file_content = json.load(f)
+            ssr = StudentSearchResults(**file_content)
+
+            ssraa = StudentSearchResultsAndAnswer(search_results=[], k=ssr.k)
+
+            for search in tqdm(ssr.search_results):
+                ssraa.search_results.append(
+                    MinimalAnswer(
+                        question=search.question,
+                        question_id=search.question_id,
+                        retrieved_sources=search.retrieved_sources,
+                        answer=answer_cls.answer(
+                            search.question, ssr.k, search.retrieved_sources
+                        ),
+                    )
+                )
+
+            with open(
+                self.save_directory + "/" + file.name,
+                "w",
+                encoding="utf-8",
+            ) as save_file:
+                json.dump(
+                    ssraa.model_dump(),
+                    save_file,
+                    indent=4,
+                    ensure_ascii=False,
+                )

@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from bm25s.utils import corpus
 from langchain_text_splitters import (
     Language,
     RecursiveCharacterTextSplitter,
@@ -79,10 +78,9 @@ class Indexer:
 
                         res.append(
                             MinimalSource(
-                                file_path=file.name,
+                                file_path=file.__str__(),
                                 first_character_index=start,
                                 last_character_index=end,
-                                text=chunk,
                             )
                         )
 
@@ -91,8 +89,8 @@ class Indexer:
     def index(self):
         chunks = self.chunking()
 
-        chunks_lst = [chunk.text for chunk in chunks]
-        metadata_chunks = [chunk.to_dict() for chunk in chunks]
+        chunks_lst = [chunk.get_text() for chunk in chunks]
+        metadata_chunks = [chunk.model_dump() for chunk in chunks]
 
         stemmer = Stemmer.Stemmer("english")
         tokenizer = bm25s.tokenization.Tokenizer(stemmer=stemmer)

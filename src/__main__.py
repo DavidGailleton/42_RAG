@@ -43,7 +43,13 @@ class RAG(object):
         self, student_search_results_path: str, save_directory: str
     ) -> None:
         """Generate answers for a dataset, producing a StudentSearchResultsAndAnswer JSON file"""
-        print("index")
+        from src.answer import AnswerDataset
+
+        answer_dataset = AnswerDataset(
+            student_search_results_path, save_directory
+        )
+
+        answer_dataset.answer_dataset()
 
     def evaluate(
         self, student_search_results_path: str, dataset_path: str
@@ -58,8 +64,8 @@ def main() -> int:
     Returns:
         Exit status code.
     """
-    fire.Fire(RAG)
     try:
+        fire.Fire(RAG)
         return 0
     except KeyboardInterrupt:
         return 1
