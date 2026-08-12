@@ -219,5 +219,9 @@ __marimo__/
 
 data/raw/*
 data/processed/*
+data/output/*
+data/datasets/*
 
 datasets_public/
+
+moulinette*

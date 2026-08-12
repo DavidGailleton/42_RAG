@@ -61,10 +61,6 @@ class Indexer:
                     ".md",
                     ".rst",
                     ".txt",
-                    ".toml",
-                    ".yaml",
-                    ".yml",
-                    ".json",
                 )
             ):
                 file_chunks: list[str] = self.split_text(file)
