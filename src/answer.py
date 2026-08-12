@@ -1,7 +1,6 @@
 from tqdm.std import tqdm
 
 from src.classes.models import (
-    ExtendedMinimalSource,
     MinimalAnswer,
     MinimalSource,
     StudentSearchResults,
@@ -51,7 +50,7 @@ class Answer:
                 f"Character range: "
                 f"{source.first_character_index}-"
                 f"{source.last_character_index}\n"
-                f"Content:\n{source.get_text()}"
+                f"Content:\n{source.get_text()}\n"
             )
 
         context = "\n\n".join(context_parts)
@@ -60,7 +59,7 @@ class Answer:
             "You answer questions about a codebase. "
             "Use only the retrieved sources. "
             "Do not invent information. "
-            "If the sources are insufficient, clearly say so."
+            'If the sources are insufficient, say "i don\'t know".'
         )
 
         user_prompt = (
