@@ -10,6 +10,10 @@ from src.classes.models import MinimalSource
 import bm25s
 import Stemmer
 
+from sentence_transformers import SentenceTransformer
+
+import numpy as np
+
 
 class Indexer:
     def __init__(self, max_chunk_size: int = 2000) -> None:
@@ -91,20 +95,54 @@ class Indexer:
 
         return res
 
-    def index(self):
-        chunks = self.chunking()
+    def embedding(self, chunks: list[str]) -> np.typing.NDArray[np.float32]:
+        """Create normalized semantic embeddings for chunks."""
+        model = SentenceTransformer(
+            "sentence-transformers/all-MiniLM-L6-v2",
+            device="cpu",
+        )
 
+        embeddings = model.encode(
+            chunks,
+            batch_size=64,
+            show_progress_bar=True,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+        )
+
+        return embeddings.astype(np.float32)
+
+    def index(self) -> None:
+        """Build and persist lexical and semantic indexes."""
+        chunks = self.chunking()
         chunks_lst = [chunk.get_text() for chunk in chunks]
+
+        embeddings = self.embedding(chunks_lst)
         metadata_chunks = [chunk.model_dump() for chunk in chunks]
 
         stemmer = Stemmer.Stemmer("english")
         tokenizer = bm25s.tokenization.Tokenizer(stemmer=stemmer)
 
-        corpus_tokens = tokenizer.tokenize(chunks_lst, return_as="tuple")
+        corpus_tokens = tokenizer.tokenize(
+            chunks_lst,
+            return_as="tuple",
+        )
 
         retriever = bm25s.BM25(corpus=metadata_chunks)
         retriever.index(corpus_tokens)
 
-        retriever.save(self.output_path, corpus=metadata_chunks)
-        tokenizer.save_vocab(self.output_path.__str__())
-        tokenizer.save_stopwords(self.output_path.__str__())
+        self.output_path.mkdir(parents=True, exist_ok=True)
+
+        retriever.save(
+            self.output_path,
+            corpus=metadata_chunks,
+        )
+        tokenizer.save_vocab(str(self.output_path))
+        tokenizer.save_stopwords(str(self.output_path))
+
+        embeddings_path = self.output_path / "semantic_embeddings.npy"
+        np.save(
+            embeddings_path,
+            embeddings,
+            allow_pickle=False,
+        )
