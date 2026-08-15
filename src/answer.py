@@ -16,9 +16,14 @@ import json
 class Answer:
     """Generate answers from retrieved codebase chunks."""
 
-    def __init__(self, llm: LocalQwen | None = None) -> None:
+    def __init__(
+        self,
+        llm: LocalQwen | None = None,
+        search_engine: Search | None = None,
+    ) -> None:
         """Initialize the answer generator."""
         self.llm = llm or LocalQwen()
+        self.search_engine = search_engine
 
     def answer(
         self,
@@ -36,7 +41,10 @@ class Answer:
             return "Unable to answer: k must be greater than zero."
 
         if top_k is None:
-            top_k = Search.search(query, k)
+            if self.search_engine is None:
+                self.search_engine = Search(retrieval_mode="bm25")
+
+            top_k = self.search_engine.search(query, k)
 
         if not top_k:
             return "No relevant sources were found."

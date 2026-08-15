@@ -14,22 +14,49 @@ class RAG(object):
 
         indexer.index()
 
-    def search(self, query: str, k: int) -> None:
-        """Return the top-k sources for a single query"""
+    def search(
+        self,
+        query: str,
+        k: int = 5,
+        retrieval_mode: str = "bm25",
+        semantic_weight: float = 0.05,
+        candidate_multiplier: int = 10,
+    ) -> None:
+        """Return the top-k sources for a single query."""
         from src.search import Search
 
-        print(Search.search(query, k))
+        search_engine = Search(
+            retrieval_mode=retrieval_mode,
+            semantic_weight=semantic_weight,
+            candidate_multiplier=candidate_multiplier,
+        )
+
+        results = search_engine.search(query, k)
+
+        for source in results:
+            print(source.model_dump_json())
 
     def search_dataset(
-        self, dataset_path: str, k: int, save_directory: str
+        self,
+        dataset_path: str,
+        k: int,
+        save_directory: str,
+        retrieval_mode: str = "bm25",
+        semantic_weight: float = 0.05,
+        candidate_multiplier: int = 10,
     ) -> None:
-        """Run search over a whole dataset and write a StudentSearchResults JSON file"""
+        """Run search over a question dataset."""
         from src.search import SearchDataset
 
-        sd = SearchDataset(
-            dataset_path=dataset_path, k=k, save_directory=save_directory
+        dataset_search = SearchDataset(
+            dataset_path=dataset_path,
+            k=k,
+            save_directory=save_directory,
+            retrieval_mode=retrieval_mode,
+            semantic_weight=semantic_weight,
+            candidate_multiplier=candidate_multiplier,
         )
-        sd.search_dataset()
+        dataset_search.search_dataset()
 
     def answer(self, query: str, k: int) -> None:
         """Answer a single query using the retrieved context"""

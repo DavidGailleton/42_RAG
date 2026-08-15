@@ -14,6 +14,8 @@ from sentence_transformers import SentenceTransformer
 
 import numpy as np
 
+import json
+
 
 class Indexer:
     def __init__(self, max_chunk_size: int = 2000) -> None:
@@ -84,12 +86,16 @@ class Indexer:
                     ".txt",
                 )
             ):
-                for chunk in self.split_text(file):
+                for id, chunk in enumerate(
+                    self.split_text(file),
+                    start=(0 if len(res) == 0 else res[-1].chunk_id + 1),
+                ):
                     res.append(
                         MinimalSource(
                             file_path=file.__str__(),
                             first_character_index=chunk[1],
                             last_character_index=chunk[2],
+                            chunk_id=id,
                         )
                     )
 
@@ -110,7 +116,7 @@ class Indexer:
             normalize_embeddings=True,
         )
 
-        return embeddings.astype(np.float32)
+        return np.asarray(embeddings, dtype=np.float32)
 
     def index(self) -> None:
         """Build and persist lexical and semantic indexes."""
@@ -145,4 +151,16 @@ class Indexer:
             embeddings_path,
             embeddings,
             allow_pickle=False,
+        )
+
+        # This file maps semantic embedding row N to chunk metadata N.
+        with (self.output_path / "chunks.json").open(
+            "w",
+            encoding="utf-8",
+        ) as file:
+            json.dump(metadata_chunks, file, indent=2, ensure_ascii=False)
+
+        print(
+            f"Indexed {len(chunks_lst)} chunks under "
+            f"{self.output_path.as_posix()}"
         )

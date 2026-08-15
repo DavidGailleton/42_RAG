@@ -1,18 +1,30 @@
-from bm25s import Any
-from pydantic import BaseModel, Field
+"""Pydantic data models used by the RAG pipeline."""
+
 import uuid
+from pathlib import Path
+from pydantic import BaseModel, Field
 
 
 class MinimalSource(BaseModel):
+    """Represent a source location in the indexed corpus."""
+
     file_path: str
     first_character_index: int
     last_character_index: int
+    chunk_id: int
 
     def get_text(self) -> str:
-        with open(self.file_path) as file:
-            return file.read()[
-                self.first_character_index : self.last_character_index
-            ]
+        """Read the source text covered by this character range."""
+        path = Path(self.file_path)
+
+        with path.open(
+            "r",
+            encoding="utf-8",
+            errors="replace",
+        ) as file:
+            content = file.read()
+
+        return content[self.first_character_index : self.last_character_index]
 
 
 class ExtendedMinimalSource(MinimalSource):
