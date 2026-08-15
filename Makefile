@@ -18,6 +18,10 @@ clean:
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 	find . -type d -name ".ruff_cache" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
+	rm -rf data/datasets/*
+	rm -rf data/output/search_results/*
+	rm -rf data/output/search_results_and_answer/*
+	rm -rf data/processed/*
 
 lint:
 	uv run flake8 .

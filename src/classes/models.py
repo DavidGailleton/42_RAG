@@ -1,5 +1,6 @@
 """Pydantic data models used by the RAG pipeline."""
 
+from datetime import date
 import uuid
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -25,6 +26,14 @@ class MinimalSource(BaseModel):
             content = file.read()
 
         return content[self.first_character_index : self.last_character_index]
+
+
+class FileInformation(BaseModel):
+    """Metadata used to detect whether a source file changed."""
+
+    file_path: str
+    last_update_ns: int
+    file_size: int
 
 
 class ExtendedMinimalSource(MinimalSource):
