@@ -8,8 +8,10 @@ import bm25s
 import numpy as np
 import Stemmer
 from numpy.typing import NDArray
+from pydantic import BaseModel, ValidationError
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
+from transformers import Cache
 
 from src.classes.models import (
     MinimalSearchResults,
@@ -79,6 +81,66 @@ class Search:
 
         if self.retrieval_mode in {"semantic", "hybrid"}:
             self._load_semantic_index()
+
+    class Cache(BaseModel):
+        """Cached retrieval results."""
+
+        questions: dict[str, list[MinimalSource]]
+
+    def get_cached_sources(
+        self,
+        query: str,
+    ) -> list[MinimalSource] | None:
+        """Return cached sources for a query, if available."""
+        cached_file = Path("data/processed/search_cache.json")
+
+        try:
+            with cached_file.open("r", encoding="utf-8") as file:
+                cache = self.Cache.model_validate(json.load(file))
+        except FileNotFoundError:
+            return None
+        except (OSError, json.JSONDecodeError, ValidationError) as error:
+            print(f"Warning: could not load search cache: {error}")
+            return None
+
+        return cache.questions.get(query)
+
+    def save_cached_sources(
+        self,
+        query: str,
+        sources: list[MinimalSource],
+    ) -> None:
+        """Save retrieved sources for a query."""
+        cached_file = Path("data/processed/search_cache.json")
+        temporary_file = cached_file.with_suffix(".tmp")
+
+        cached_file.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            with cached_file.open("r", encoding="utf-8") as file:
+                cache = self.Cache.model_validate(json.load(file))
+        except FileNotFoundError:
+            cache = self.Cache(questions={})
+        except (OSError, json.JSONDecodeError, ValidationError) as error:
+            print(f"Warning: rebuilding invalid search cache: {error}")
+            cache = self.Cache(questions={})
+
+        cache.questions[query] = sources
+
+        try:
+            with temporary_file.open("w", encoding="utf-8") as file:
+                json.dump(
+                    cache.model_dump(mode="json"),
+                    file,
+                    indent=4,
+                    ensure_ascii=False,
+                )
+
+            # Atomic replacement prevents a partially written cache.
+            temporary_file.replace(cached_file)
+        except OSError as error:
+            print(f"Warning: could not save search cache: {error}")
+            temporary_file.unlink(missing_ok=True)
 
     def _load_metadata(self) -> list[dict[str, Any]]:
         """Load and validate chunk metadata.
@@ -422,6 +484,10 @@ class Search:
         """
         clean_query = query.strip()
 
+        cached_answer = self.get_cached_sources(query=clean_query)
+        if cached_answer and len(cached_answer) >= k:
+            return cached_answer[:k]
+
         if not clean_query or k <= 0 or not self.metadata:
             return []
 
@@ -461,9 +527,11 @@ class Search:
                 k=result_count,
             )
 
-        return [
-            self._to_minimal_source(chunk_id) for chunk_id in final_ranking
-        ]
+        res = [self._to_minimal_source(chunk_id) for chunk_id in final_ranking]
+
+        self.save_cached_sources(clean_query, res)
+
+        return res
 
 
 class SearchDataset:

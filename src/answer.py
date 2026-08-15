@@ -1,3 +1,4 @@
+from pydantic import BaseModel, ValidationError
 from tqdm.std import tqdm
 
 from src.classes.models import (
@@ -25,6 +26,75 @@ class Answer:
         self.llm = llm or LocalQwen()
         self.search_engine = search_engine
 
+    class Cache(BaseModel):
+        """Cached retrieval results."""
+
+        questions_answer: list[dict[str, str]]
+        k: int
+
+        def get_res(self, query: str) -> str | None:
+            for qa in self.questions_answer:
+                for q in qa:
+                    if q == query:
+                        return qa[q]
+
+    def get_cached_sources(self, query: str, k: int) -> str | None:
+        """Return cached sources for a query, if available."""
+        cached_file = Path("data/processed/answer_cache.json")
+
+        try:
+            with cached_file.open("r", encoding="utf-8") as file:
+                cache = self.Cache.model_validate(json.load(file))
+        except FileNotFoundError:
+            return None
+        except (OSError, json.JSONDecodeError, ValidationError) as error:
+            print(f"Warning: could not load search cache: {error}")
+            return None
+
+        if cache.k != k:
+            return None
+
+        return cache.get_res(query)
+
+    def save_cached_sources(self, query: str, answer: str, k: int) -> None:
+        """Save retrieved sources for a query."""
+        cached_file = Path("data/processed/answer_cache.json")
+        temporary_file = cached_file.with_suffix(".tmp")
+
+        cached_file.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            with cached_file.open("r", encoding="utf-8") as file:
+                cache = self.Cache.model_validate(json.load(file))
+            if cache.k != k:
+                raise ValueError("k not the same in cache")
+        except FileNotFoundError:
+            cache = self.Cache(questions_answer=[], k=k)
+        except (
+            OSError,
+            json.JSONDecodeError,
+            ValidationError,
+            ValueError,
+        ) as error:
+            print(f"Warning: rebuilding invalid search cache: {error}")
+            cache = self.Cache(questions_answer=[], k=k)
+
+        cache.questions_answer.append({query: answer})
+
+        try:
+            with temporary_file.open("w", encoding="utf-8") as file:
+                json.dump(
+                    cache.model_dump(mode="json"),
+                    file,
+                    indent=4,
+                    ensure_ascii=False,
+                )
+
+            temporary_file.replace(cached_file)
+        except OSError as error:
+            print(f"Warning: could not save search cache: {error}")
+            temporary_file.unlink(missing_ok=True)
+
     def answer(
         self,
         query: str,
@@ -33,6 +103,11 @@ class Answer:
     ) -> str:
         """Answer a query using retrieved sources."""
         query = query.strip()
+
+        answer_cache = self.get_cached_sources(query, k)
+
+        if answer_cache:
+            return answer_cache
 
         if not query:
             return "Unable to answer: the query is empty."
@@ -77,10 +152,13 @@ class Answer:
         )
 
         try:
-            return self.llm.invoke(
+            res = self.llm.invoke(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
             )
+            self.save_cached_sources(query, res, k)
+
+            return res
         except ValueError:
             return "Invalid source found"
         except OSError as error:
