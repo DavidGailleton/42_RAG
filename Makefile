@@ -12,6 +12,9 @@ run:
 debug:
 	$(PYTHON) -m pdb $(MAIN)
 
+api:
+	uv run fastapi run src/api.py
+
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d -name ".mypy_cache" -exec rm -rf {} +

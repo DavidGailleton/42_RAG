@@ -84,6 +84,11 @@ class RAG(object):
         """Report your own recall@k against a ground-truth dataset, for your own testing"""
         print("index")
 
+    def api(self) -> None:
+        from src.api import API
+
+        API()
+
 
 def main() -> int:
     """Run the main program.
