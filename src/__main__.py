@@ -69,7 +69,8 @@ class RAG(object):
     def answer_dataset(
         self, student_search_results_path: str, save_directory: str
     ) -> None:
-        """Generate answers for a dataset, producing a StudentSearchResultsAndAnswer JSON file"""
+        """Generate answers for a dataset, \
+        producing a StudentSearchResultsAndAnswer JSON file"""
         from src.answer import AnswerDataset
 
         answer_dataset = AnswerDataset(
@@ -81,7 +82,8 @@ class RAG(object):
     def evaluate(
         self, student_search_results_path: str, dataset_path: str
     ) -> None:
-        """Report your own recall@k against a ground-truth dataset, for your own testing"""
+        """Report your own recall@k against a ground-truth dataset, \
+        for your own testing"""
         from src.evaluate import Evaluate
 
         eva = Evaluate(student_search_results_path, dataset_path)

@@ -7,11 +7,11 @@ from typing import Any
 import bm25s
 import numpy as np
 import Stemmer
+from bm25s.tokenization import Tokenized
 from numpy.typing import NDArray
 from pydantic import BaseModel, ValidationError
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
-from transformers import Cache
 
 from src.classes.models import (
     MinimalSearchResults,
@@ -321,7 +321,10 @@ class Search:
         if candidate_count <= 0:
             return []
 
-        query_tokens = self.tokenizer.tokenize([query])
+        query_tokens = self.tokenizer.tokenize([query], return_as="tuple")
+
+        if not isinstance(query_tokens, Tokenized):
+            raise TypeError("query_tokens should by 'Tokenized' type")
 
         documents, _ = self.retriever.retrieve(
             query_tokens,

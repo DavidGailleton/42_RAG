@@ -2,6 +2,7 @@
 
 import uuid
 from pathlib import Path
+
 from pydantic import BaseModel, Field
 
 
@@ -24,7 +25,7 @@ class MinimalSource(BaseModel):
         ) as file:
             content = file.read()
 
-        return content[self.first_character_index : self.last_character_index]
+        return content[self.first_character_index:self.last_character_index]
 
 
 class FileInformation(BaseModel):

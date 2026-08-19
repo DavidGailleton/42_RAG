@@ -1,4 +1,4 @@
-from typing import Any, Generator
+from typing import Any, cast
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -15,9 +15,13 @@ class LocalQwen:
         """
         self.model_name = model_name
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        # Transformers uses dynamic factory classes. Mark the boundary as Any
+        # because the concrete types depend on the selected model.
+        tokenizer_factory: Any = AutoTokenizer
+        model_factory: Any = AutoModelForCausalLM
 
-        self.model = AutoModelForCausalLM.from_pretrained(
+        self.tokenizer: Any = tokenizer_factory.from_pretrained(model_name)
+        self.model: Any = model_factory.from_pretrained(
             model_name,
             torch_dtype="auto",
         )
@@ -43,7 +47,13 @@ class LocalQwen:
 
         Returns:
             Generated text without the original prompt.
+
+        Raises:
+            ValueError: If max_new_tokens is not positive.
         """
+        if max_new_tokens <= 0:
+            raise ValueError("max_new_tokens must be greater than zero")
+
         messages = [
             {
                 "role": "system",
@@ -55,14 +65,14 @@ class LocalQwen:
             },
         ]
 
-        prompt = self.tokenizer.apply_chat_template(
+        prompt: str = self.tokenizer.apply_chat_template(
             messages,
             tokenize=False,
             add_generation_prompt=True,
             enable_thinking=False,
         )
 
-        model_inputs: dict[str, Any] = self.tokenizer(
+        model_inputs: dict[str, torch.Tensor] = self.tokenizer(
             prompt,
             return_tensors="pt",
         )
@@ -72,7 +82,7 @@ class LocalQwen:
         }
 
         with torch.inference_mode():
-            output_ids = self.model.generate(
+            output_ids: torch.Tensor = self.model.generate(
                 **model_inputs,
                 max_new_tokens=max_new_tokens,
                 do_sample=False,
@@ -82,10 +92,11 @@ class LocalQwen:
         prompt_length = model_inputs["input_ids"].shape[1]
         generated_ids = output_ids[0][prompt_length:]
 
-        return self.tokenizer.decode(
-            generated_ids,
-            skip_special_tokens=True,
-        ).strip()
-
-    def chunk(self) -> Generator:
-        pass
+        decoded = cast(
+            str,
+            self.tokenizer.decode(
+                generated_ids,
+                skip_special_tokens=True,
+            ),
+        )
+        return decoded.strip()

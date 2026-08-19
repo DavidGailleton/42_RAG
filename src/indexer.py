@@ -1,22 +1,15 @@
+import json
 from pathlib import Path
 from typing import Any
 
-from langchain_text_splitters import (
-    Language,
-    RecursiveCharacterTextSplitter,
-)
-from pydantic import ValidationError
-
-from src.classes.models import FileInformation, MinimalSource
-
 import bm25s
+import numpy as np
 import Stemmer
-
+from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
+from pydantic import ValidationError
 from sentence_transformers import SentenceTransformer
 
-import numpy as np
-
-import json
+from src.classes.models import FileInformation, MinimalSource
 
 
 class Indexer:
@@ -29,33 +22,47 @@ class Indexer:
         self,
         suffix: str,
     ) -> RecursiveCharacterTextSplitter:
-        """Create a splitter appropriate for the file type."""
-        common_options = {
-            "chunk_size": self.max_chunk_size,
-            "chunk_overlap": 200,
-            "add_start_index": True,
-            "strip_whitespace": False,
-        }
+        """Create a splitter appropriate for the file type.
 
+        Args:
+            suffix: Lowercase source-file suffix.
+
+        Returns:
+            A text splitter configured for the source language.
+        """
         if suffix == ".py":
             return RecursiveCharacterTextSplitter.from_language(
                 language=Language.PYTHON,
-                **common_options,
+                chunk_size=self.max_chunk_size,
+                chunk_overlap=200,
+                add_start_index=True,
+                strip_whitespace=False,
             )
 
         if suffix == ".md":
             return RecursiveCharacterTextSplitter.from_language(
                 language=Language.MARKDOWN,
-                **common_options,
+                chunk_size=self.max_chunk_size,
+                chunk_overlap=200,
+                add_start_index=True,
+                strip_whitespace=False,
             )
 
         if suffix == ".rst":
             return RecursiveCharacterTextSplitter.from_language(
                 language=Language.RST,
-                **common_options,
+                chunk_size=self.max_chunk_size,
+                chunk_overlap=200,
+                add_start_index=True,
+                strip_whitespace=False,
             )
 
-        return RecursiveCharacterTextSplitter(**common_options)
+        return RecursiveCharacterTextSplitter(
+            chunk_size=self.max_chunk_size,
+            chunk_overlap=200,
+            add_start_index=True,
+            strip_whitespace=False,
+        )
 
     def split_text(
         self,
@@ -86,8 +93,9 @@ class Indexer:
             cache_path: Path to the metadata JSON file.
 
         Returns:
-            Metadata indexed by source file path. An empty dictionary is returned
-            when the cache is missing or invalid.
+            Metadata indexed by source file path.
+            An empty dictionary is returned when \
+            the cache is missing or invalid.
         """
         try:
             with cache_path.open("r", encoding="utf-8") as file:
@@ -167,8 +175,11 @@ class Indexer:
         cached_files = self._load_file_cache(cache_path)
 
         old_chunks_by_path: dict[str, list[MinimalSource]] = {}
-        for chunk in old_chunks:
-            old_chunks_by_path.setdefault(chunk.file_path, []).append(chunk)
+        for old_chunk in old_chunks:
+            old_chunks_by_path.setdefault(
+                old_chunk.file_path,
+                [],
+            ).append(old_chunk)
 
         current_files = sorted(
             (
@@ -221,25 +232,22 @@ class Indexer:
             )
 
             if is_unchanged:
-                # Preserve chunks from the previous index.
                 result.extend(old_chunks_by_path[path_string])
                 updated_cache.append(current_information)
                 continue
 
-            # The file is new or changed. Do not preserve its old chunks.
             try:
                 split_chunks = self.split_text(file_path)
             except (OSError, UnicodeError, ValueError) as error:
                 print(f"Warning: cannot chunk {path_string}: {error}")
-                # Do not cache the file, allowing the next run to retry it.
                 continue
 
-            for chunk in split_chunks:
+            for _chunk_text, start_index, end_index in split_chunks:
                 result.append(
                     MinimalSource(
                         file_path=path_string,
-                        first_character_index=chunk[1],
-                        last_character_index=chunk[2],
+                        first_character_index=start_index,
+                        last_character_index=end_index,
                         chunk_id=next_chunk_id,
                     )
                 )
@@ -272,11 +280,23 @@ class Indexer:
         chunks_path = self.output_path / "chunks.json"
 
         try:
-            with open(chunks_path) as file:
-                old_chunks = [
-                    MinimalSource(**chunk) for chunk in json.load(file)
-                ]
-        except FileNotFoundError:
+            with chunks_path.open("r", encoding="utf-8") as file:
+                raw_chunks: Any = json.load(file)
+
+            if not isinstance(raw_chunks, list):
+                raise ValueError("chunks.json must contain a JSON list")
+
+            old_chunks = [
+                MinimalSource.model_validate(chunk) for chunk in raw_chunks
+            ]
+        except (
+            FileNotFoundError,
+            OSError,
+            json.JSONDecodeError,
+            ValidationError,
+            ValueError,
+        ) as error:
+            print(f"Warning: cannot load previous chunks: {error}")
             old_chunks = []
 
         chunks = self.chunking(old_chunks)

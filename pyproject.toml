@@ -5,21 +5,27 @@ description = "Will you answer my questions?"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "accelerate>=1.14.0",
-    "bm25s>=0.3.10",
-    "fastapi[standard]>=0.141.1",
-    "fire>=0.7.1",
-    "langchain-text-splitters>=1.1.2",
-    "numpy>=2.2.6",
-    "pydantic>=2.13.4",
-    "pystemmer>=3.1.0",
-    "sentence-transformers>=5.7.0",
-    "torch>=2.13.0",
-    "transformers>=5.15.0",
+  "accelerate>=1.14.0",
+  "bm25s>=0.3.10",
+  "fastapi[standard]>=0.141.1",
+  "fire>=0.7.1",
+  "langchain-text-splitters>=1.1.2",
+  "numpy>=2.2.0",
+  "pydantic>=2.13.4",
+  "pystemmer>=3.1.0",
+  "sentence-transformers>=5.7.0",
+  "torch>=2.13.0",
+  "transformers>=5.15.0",
 ]
 
 [dependency-groups]
-dev = ["flake8>=7.0.0", "mypy>=1.10.0", "pytest>=8.0.0"]
+dev = [
+  "flake8>=7.0.0",
+  "flake8-pyproject>=1.2.4",
+  "isort>=8.0.1",
+  "mypy>=1.10.0",
+  "pytest>=8.0.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -32,6 +38,11 @@ warn_unused_ignores = true
 ignore_missing_imports = true
 disallow_untyped_defs = true
 check_untyped_defs = true
+exclude_gitignore = true
 
 [tool.flake8]
-exclude = [".venv", "__pycache__", ".mypy_cache", ".pytest_cache"]
+exclude = [".venv", "__pycache__", ".mypy_cache", ".pytest_cache", "data"]
+
+[tool.isort]
+profile = "black"
+line_length = 79

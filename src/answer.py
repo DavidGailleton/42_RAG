@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from pydantic import BaseModel, ValidationError
 from tqdm.std import tqdm
 
@@ -9,9 +12,6 @@ from src.classes.models import (
 )
 from src.local_llm import LocalQwen
 from src.search import Search
-
-from pathlib import Path
-import json
 
 
 class Answer:
@@ -37,6 +37,7 @@ class Answer:
                 for q in qa:
                     if q == query:
                         return qa[q]
+            return None
 
     def get_cached_sources(self, query: str, k: int) -> str | None:
         """Return cached sources for a query, if available."""

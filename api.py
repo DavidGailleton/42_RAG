@@ -1,29 +1,38 @@
+from .src.classes.models import MinimalSource
 from fastapi import FastAPI
 
 app = FastAPI()
 
 
 @app.get("/")
-def write_man():
+def write_man() -> list[dict[str, str]]:
     return [
         {
-            "/index/{max_chunk_size}": "Ingest data/raw/ and build the index under data/processed/"
-        },
-        {"/search/{query}/{k}": "Return the top-k sources for a single query"},
-        {
-            "/search_dataset/{dataset_path}/{k}/{save_directory}": "Run search over a whole dataset and write a StudentSearchResults JSON file"
+            "/index/{max_chunk_size}": "Ingest data/raw/ \
+            and build the index under data/processed/"
         },
         {
-            "/answer/{query}/{k}": "Answer a single query using the retrieved context"
+            "/search/{query}/{k}": "Return the top-k sources \
+        for a single query"
         },
         {
-            "/answer_dataset/{student_search_results_path}/{save_directory}": "Generate answers for a dataset, producing a StudentSearchResultsAndAnswer JSON file"
+            "/search_dataset/{dataset_path}/{k}/{save_directory}": "Run sear\
+            ch over a whole dataset and write a StudentSearchResults JSON file"
+        },
+        {
+            "/answer/{query}/{k}": "Answer a single query using \
+            the retrieved context"
+        },
+        {
+            "/answer_dataset/{student_search_results_path}/{save_directory}\
+            ": "Generate answers for a dataset, producing a StudentSearchRes\
+            ultsAndAnswer JSON file"
         },
     ]
 
 
 @app.get("/index/{max_chunk_size}")
-def index(max_chunk_size: int = 2000):
+def index(max_chunk_size: int = 2000) -> dict[str, str]:
     from src.indexer import Indexer
 
     try:
@@ -34,7 +43,7 @@ def index(max_chunk_size: int = 2000):
 
 
 @app.get("/search/{query}/{k}")
-def search(query: str, k: int):
+def search(query: str, k: int) -> dict[str, str | list[MinimalSource]]:
     from src.search import Search
 
     try:
@@ -46,7 +55,9 @@ def search(query: str, k: int):
 
 
 @app.get("/search_dataset/{dataset_path}/{k}/{save_directory}")
-def search_dataset(dataset_path: str, k: int, save_directory: str):
+def search_dataset(
+    dataset_path: str, k: int, save_directory: str
+) -> dict[str, str]:
     from src.search import SearchDataset
 
     try:
@@ -60,7 +71,7 @@ def search_dataset(dataset_path: str, k: int, save_directory: str):
 
 
 @app.get("/answer/{query}/{k}")
-def answer(query: str, k: int):
+def answer(query: str, k: int) -> dict[str, str]:
     from src.answer import Answer
 
     try:
@@ -72,7 +83,9 @@ def answer(query: str, k: int):
 
 
 @app.get("/answer_dataset/{student_search_results_path}/{save_directory}")
-def answer_dataset(student_search_results_path: str, save_directory: str):
+def answer_dataset(
+    student_search_results_path: str, save_directory: str
+) -> dict[str, str]:
     from src.answer import AnswerDataset
 
     try:

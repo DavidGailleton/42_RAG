@@ -1,7 +1,7 @@
-from pathlib import Path
 import json
+from pathlib import Path
 
-from .classes.models import AnsweredQuestion, RagDataset, StudentSearchResults
+from .classes.models import AnsweredQuestion, StudentSearchResults
 
 
 class Evaluate:
