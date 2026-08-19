@@ -1,4 +1,4 @@
-from search import Search, SearchDataset
+from .search import Search, SearchDataset
 
 from .answer import Answer, AnswerDataset
 from .evaluate import Evaluate

@@ -206,7 +206,11 @@ class Indexer:
             + 1
         )
 
-        for file_path in current_files:
+        from tqdm import tqdm
+
+        for _, file_path in tqdm(
+            enumerate(current_files), desc="Chunking files"
+        ):
             path_string = str(file_path)
 
             try:

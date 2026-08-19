@@ -1,5 +1,6 @@
 PYTHON = uv run python
 MAIN = src
+ARGS =
 
 .PHONY: install run debug clean lint lint-strict test
 
@@ -7,7 +8,7 @@ install:
 	uv sync
 
 run:
-	$(PYTHON) -m $(MAIN)
+	$(PYTHON) -m $(MAIN) $(ARGS)
 
 debug:
 	$(PYTHON) -m pdb $(MAIN)
@@ -25,6 +26,7 @@ clean:
 	rm -rf data/output/search_results/*
 	rm -rf data/output/search_results_and_answer/*
 	rm -rf data/processed/*
+	rm -rf data/raw/*
 
 lint:
 	uv run flake8 .
