@@ -1,6 +1,5 @@
 """Pydantic data models used by the RAG pipeline."""
 
-from datetime import date
 import uuid
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -12,7 +11,7 @@ class MinimalSource(BaseModel):
     file_path: str
     first_character_index: int
     last_character_index: int
-    chunk_id: int
+    chunk_id: int | None = Field(default=None)
 
     def get_text(self) -> str:
         """Read the source text covered by this character range."""
@@ -67,6 +66,14 @@ class MinimalAnswer(MinimalSearchResults):
 class StudentSearchResults(BaseModel):
     search_results: list[MinimalSearchResults]
     k: int
+
+    def get_msr_by_question(
+        self, question: str
+    ) -> MinimalSearchResults | None:
+        for sr in self.search_results:
+            if sr.question == question:
+                return sr
+        return None
 
 
 class StudentSearchResultsAndAnswer(BaseModel):

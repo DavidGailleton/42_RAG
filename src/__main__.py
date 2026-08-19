@@ -82,12 +82,12 @@ class RAG(object):
         self, student_search_results_path: str, dataset_path: str
     ) -> None:
         """Report your own recall@k against a ground-truth dataset, for your own testing"""
-        print("index")
+        from src.evaluate import Evaluate
 
-    def api(self) -> None:
-        from src.api import API
-
-        API()
+        eva = Evaluate(student_search_results_path, dataset_path)
+        for r_to_test in [1, 3, 5, 10]:
+            res = eva.evaluate(r_to_test)
+            print(f"Recall {r_to_test}: {res:.2f}")
 
 
 def main() -> int:
