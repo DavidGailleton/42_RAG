@@ -12,8 +12,36 @@ from sentence_transformers import SentenceTransformer
 from src.classes.models import FileInformation, MinimalSource
 
 
+"""Build and persist lexical and semantic indexes for the source corpus."""
+
+
 class Indexer:
+    """Build retrieval indexes from files in the raw-data directory.
+
+    The indexer splits supported source files into character-bounded chunks,
+    builds a BM25 lexical index and a semantic embedding index, and persists
+    the generated data under ``data/processed/``.
+
+    Attributes:
+        max_chunk_size: Maximum number of characters in a chunk.
+        input_path: Directory containing source files to index.
+        output_path: Directory in which generated indexes are stored.
+    """
+
     def __init__(self, max_chunk_size: int = 2000) -> None:
+        """Initialize the indexer.
+
+        Args:
+            max_chunk_size: Maximum number of characters allowed in a chunk.
+
+        Raises:
+            ValueError: If ``max_chunk_size`` is outside the range 1 to 2000.
+        """
+        if not 1 <= max_chunk_size <= 2000:
+            raise ValueError(
+                "max_chunk_size must be between 1 and 2000 characters"
+            )
+
         self.max_chunk_size = max_chunk_size
         self.input_path = Path("data/raw/")
         self.output_path = Path("data/processed/")
@@ -68,7 +96,19 @@ class Indexer:
         self,
         file: Path,
     ) -> list[tuple[str, int, int]]:
-        """Split a file while preserving exact character positions."""
+        """Split a source file while preserving character positions.
+
+        Args:
+            file: Path to the source file to split.
+
+        Returns:
+            A list of tuples containing the chunk text, inclusive start
+            position, and exclusive end position.
+
+        Raises:
+            OSError: If the source file cannot be read.
+            ValueError: If the splitter cannot process the file contents.
+        """
         text = file.read_text(encoding="utf-8", errors="replace")
         splitter = self.make_splitter(file.suffix.lower())
         documents = splitter.create_documents([text])
@@ -262,8 +302,23 @@ class Indexer:
         self._save_file_cache(cache_path, updated_cache)
         return result
 
-    def embedding(self, chunks: list[str]) -> np.typing.NDArray[np.float32]:
-        """Create normalized semantic embeddings for chunks."""
+    def embedding(
+        self,
+        chunks: list[str],
+    ) -> np.typing.NDArray[np.float32]:
+        """Create normalized semantic embeddings for source chunks.
+
+        Args:
+            chunks: Source texts to encode.
+
+        Returns:
+            A two-dimensional NumPy array containing one normalized embedding
+            per source chunk.
+
+        Raises:
+            OSError: If the embedding model cannot be loaded.
+            RuntimeError: If embedding generation fails.
+        """
         model = SentenceTransformer(
             "sentence-transformers/all-MiniLM-L6-v2",
             device="cpu",
@@ -280,7 +335,16 @@ class Indexer:
         return np.asarray(embeddings, dtype=np.float32)
 
     def index(self) -> None:
-        """Build and persist lexical and semantic indexes."""
+        """Build and persist the lexical and semantic indexes.
+
+        Existing chunk metadata is loaded when possible to support incremental
+        indexing. The method writes the BM25 index, tokenizer data, semantic
+        embeddings, chunk metadata, and file-information cache under the
+        processed-data directory.
+
+        Returns:
+            None.
+        """
         chunks_path = self.output_path / "chunks.json"
 
         try:

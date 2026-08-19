@@ -83,7 +83,11 @@ class Search:
             self._load_semantic_index()
 
     class Cache(BaseModel):
-        """Cached retrieval results."""
+        """Represent cached retrieval results.
+
+        Attributes:
+            questions: Mapping from normalized queries to ranked sources.
+        """
 
         questions: dict[str, list[MinimalSource]]
 
@@ -91,7 +95,14 @@ class Search:
         self,
         query: str,
     ) -> list[MinimalSource] | None:
-        """Return cached sources for a query, if available."""
+        """Load cached retrieval results for a query.
+
+        Args:
+            query: Normalized query whose results should be loaded.
+
+        Returns:
+            Cached ranked sources, or ``None`` if the query is not cached.
+        """
         cached_file = Path("data/processed/search_cache.json")
 
         try:
@@ -110,7 +121,15 @@ class Search:
         query: str,
         sources: list[MinimalSource],
     ) -> None:
-        """Save retrieved sources for a query."""
+        """Store retrieval results in the query cache.
+
+        Args:
+            query: Normalized query associated with the sources.
+            sources: Ranked source locations to cache.
+
+        Returns:
+            None.
+        """
         cached_file = Path("data/processed/search_cache.json")
         temporary_file = cached_file.with_suffix(".tmp")
 
@@ -228,10 +247,13 @@ class Search:
     def _load_bm25(
         self,
     ) -> tuple[bm25s.BM25, bm25s.tokenization.Tokenizer]:
-        """Load the BM25 retriever and tokenizer.
+        """Load the persisted BM25 retriever and tokenizer.
 
         Returns:
-            Loaded BM25 retriever and tokenizer.
+            A tuple containing the loaded BM25 retriever and tokenizer.
+
+        Raises:
+            ValueError: If the BM25 index or tokenizer data cannot be loaded.
         """
         try:
             retriever = bm25s.BM25.load(
@@ -362,7 +384,8 @@ class Search:
             candidate_count: Maximum number of candidates.
 
         Returns:
-            Semantic ranking and similarity scores for every chunk.
+            A tuple containing ranked chunk IDs and the similarity score for
+            every indexed chunk.
 
         Raises:
             RuntimeError: If the semantic index was not loaded.
@@ -476,14 +499,15 @@ class Search:
         query: str,
         k: int = 5,
     ) -> list[MinimalSource]:
-        """Return the top-k sources for a query.
+        """Retrieve the top-k source chunks for a query.
 
         Args:
-            query: Natural-language or code search query.
-            k: Number of sources to retrieve.
+            query: Natural-language or code-oriented search query.
+            k: Maximum number of sources to retrieve.
 
         Returns:
-            Ranked source locations.
+            Ranked source locations. An empty list is returned when the query
+            is empty, ``k`` is not positive, or the index contains no chunks.
         """
         clean_query = query.strip()
 
@@ -538,7 +562,14 @@ class Search:
 
 
 class SearchDataset:
-    """Run retrieval over a JSON question dataset."""
+    """Run retrieval over one or more JSON question datasets.
+
+    Attributes:
+        dataset_path: Input dataset file or directory.
+        k: Number of results requested per question.
+        save_directory: Directory in which result files are written.
+        search_engine: Retrieval engine shared by all dataset questions.
+    """
 
     def __init__(
         self,
@@ -570,10 +601,11 @@ class SearchDataset:
         )
 
     def _find_dataset_files(self) -> list[Path]:
-        """Find input dataset files.
+        """Locate JSON dataset files below the configured input path.
 
         Returns:
-            Sorted JSON dataset paths.
+            A sorted list of JSON paths. The list is empty when the configured
+            path does not exist or is not a JSON file or directory.
         """
         if self.dataset_path.is_file():
             if self.dataset_path.suffix.lower() == ".json":
@@ -631,11 +663,17 @@ class SearchDataset:
         results: StudentSearchResults,
         output_path: Path,
     ) -> None:
-        """Save search results as JSON.
+        """Serialize validated search results to JSON.
 
         Args:
-            results: Validated search results.
+            results: Search results to serialize.
             output_path: Destination JSON path.
+
+        Returns:
+            None.
+
+        Raises:
+            OSError: If the output file cannot be written.
         """
         with output_path.open("w", encoding="utf-8") as file:
             json.dump(
@@ -646,7 +684,14 @@ class SearchDataset:
             )
 
     def search_dataset(self) -> None:
-        """Search all questions and save their retrieval results."""
+        """Search every question and save the retrieval results.
+
+        Invalid datasets are reported and skipped without interrupting the
+        remaining files.
+
+        Returns:
+            None.
+        """
         if self.k < 0:
             print("Error: k cannot be negative")
             return

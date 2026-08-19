@@ -5,7 +5,14 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 class LocalQwen:
-    """Load and execute Qwen directly with Transformers."""
+    """Load and run a local Qwen causal language model.
+
+    Attributes:
+        model_name: Hugging Face identifier of the loaded model.
+        tokenizer: Tokenizer associated with the model.
+        model: Loaded causal language model.
+        device: Torch device used for inference.
+    """
 
     def __init__(self, model_name: str = "Qwen/Qwen3-0.6B") -> None:
         """Initialize the local Qwen model.
@@ -38,18 +45,19 @@ class LocalQwen:
         user_prompt: str,
         max_new_tokens: int = 300,
     ) -> str:
-        """Generate an answer from system and user prompts.
+        """Generate text from system and user prompts.
 
         Args:
-            system_prompt: Instructions given to the model.
-            user_prompt: Question and retrieved context.
-            max_new_tokens: Maximum number of generated tokens.
+            system_prompt: Instructions controlling model behavior.
+            user_prompt: User question and retrieved supporting context.
+            max_new_tokens: Maximum number of tokens to generate.
 
         Returns:
-            Generated text without the original prompt.
+            Generated text with the input prompt and special tokens removed.
 
         Raises:
-            ValueError: If max_new_tokens is not positive.
+            ValueError: If ``max_new_tokens`` is not positive.
+            RuntimeError: If model inference fails.
         """
         if max_new_tokens <= 0:
             raise ValueError("max_new_tokens must be greater than zero")

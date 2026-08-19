@@ -4,10 +4,17 @@ import fire
 
 
 class RAG(object):
-    """Will you answer my questions?"""
+    """Expose the RAG pipeline commands through Python Fire."""
 
     def index(self, max_chunk_size: int = 2000) -> None:
-        """Ingest data/raw/ and build the index under data/processed/"""
+        """Build indexes from the raw source corpus.
+
+        Args:
+            max_chunk_size: Maximum number of characters allowed in a chunk.
+
+        Returns:
+            None.
+        """
         from src.indexer import Indexer
 
         indexer = Indexer(max_chunk_size=max_chunk_size)
@@ -22,7 +29,19 @@ class RAG(object):
         semantic_weight: float = 0.05,
         candidate_multiplier: int = 10,
     ) -> None:
-        """Return the top-k sources for a single query."""
+        """Print the top-k sources for a single query.
+
+        Args:
+            query: Natural-language or code-oriented search query.
+            k: Maximum number of sources to retrieve.
+            retrieval_mode: Retrieval method to use. Supported values are
+                ``bm25``, ``semantic``, and ``hybrid``.
+            semantic_weight: Semantic contribution used in hybrid mode.
+            candidate_multiplier: Multiplier used to size the candidate pool.
+
+        Returns:
+            None.
+        """
         from src.search import Search
 
         search_engine = Search(
@@ -45,7 +64,19 @@ class RAG(object):
         semantic_weight: float = 0.05,
         candidate_multiplier: int = 10,
     ) -> None:
-        """Run search over a question dataset."""
+        """Retrieve sources for every question in a dataset.
+
+        Args:
+            dataset_path: Path to a dataset JSON file or directory.
+            k: Maximum number of sources to retrieve per question.
+            save_directory: Directory in which results are written.
+            retrieval_mode: Retrieval method to use.
+            semantic_weight: Semantic contribution used in hybrid mode.
+            candidate_multiplier: Multiplier used to size the candidate pool.
+
+        Returns:
+            None.
+        """
         from src.search import SearchDataset
 
         dataset_search = SearchDataset(
@@ -59,7 +90,15 @@ class RAG(object):
         dataset_search.search_dataset()
 
     def answer(self, query: str, k: int) -> None:
-        """Answer a single query using the retrieved context"""
+        """Generate and print an answer for a single query.
+
+        Args:
+            query: Natural-language question to answer.
+            k: Number of retrieved sources to provide to the model.
+
+        Returns:
+            None.
+        """
         from src.answer import Answer
 
         answer = Answer()
@@ -69,8 +108,16 @@ class RAG(object):
     def answer_dataset(
         self, student_search_results_path: str, save_directory: str
     ) -> None:
-        """Generate answers for a dataset, \
-        producing a StudentSearchResultsAndAnswer JSON file"""
+        """Generate answers for a retrieval-results dataset.
+
+        Args:
+            student_search_results_path: Path to a search-results JSON file or
+                directory.
+            save_directory: Directory in which generated answers are saved.
+
+        Returns:
+            None.
+        """
         from src.answer import AnswerDataset
 
         answer_dataset = AnswerDataset(
@@ -82,8 +129,15 @@ class RAG(object):
     def evaluate(
         self, student_search_results_path: str, dataset_path: str
     ) -> None:
-        """Report your own recall@k against a ground-truth dataset, \
-        for your own testing"""
+        """Print recall scores against a ground-truth dataset.
+
+        Args:
+            student_search_results_path: Path to student retrieval results.
+            dataset_path: Path to the answered ground-truth dataset.
+
+        Returns:
+            None.
+        """
         from src.evaluate import Evaluate
 
         eva = Evaluate(student_search_results_path, dataset_path)
@@ -93,10 +147,11 @@ class RAG(object):
 
 
 def main() -> int:
-    """Run the main program.
+    """Run the Python Fire command-line interface.
 
     Returns:
-        Exit status code.
+        Zero when execution succeeds and one when execution is interrupted or
+        an error occurs.
     """
     try:
         fire.Fire(RAG)
